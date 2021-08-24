@@ -110,6 +110,12 @@ Die Anmeldung zur Veranstaltung 1094 wurde durchgeführt.
 Frei: 19 / 25
 
 ```
+### Single registration using course number
+One can also use the Single registration where is only needed to fill up the course number and click on sign-up button.
+
+A new parameter `-a=number_registration` does the trick. Then number of the course is needed `-lv` .
+
+`python api.py -c=creds.txt -a=number_registration -lv=1234`
 
 # Copyright & License
 
