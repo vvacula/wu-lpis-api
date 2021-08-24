@@ -119,6 +119,10 @@ class WuLpisApi():
         print("\n---------- Course information ------------")
         print(json.dumps(lv_course_data, sort_keys=False, indent=4, ensure_ascii=False).encode('utf8'))
 
+        reg_open_time = time.mktime(datetime.datetime.strptime(lv_course_data['registration_open'], "%d.%m.%Y %H:%M").timetuple())
+        reg_close_time = time.mktime(datetime.datetime.strptime(lv_course_data['registration_close'], "%d.%m.%Y %H:%M").timetuple())
+        current_time = time.time()
+
         msg_area = course.find(text=lambda s: isinstance(s, Comment) and "Message Area" in s)
         print("\n---------- {} ------------".format(msg_area.strip()))
         # print(msg_area.strip())
@@ -176,14 +180,29 @@ class WuLpisApi():
                 lv_data.append(map(lambda lv: lv.get_text(strip=True), rows))
             else:
                 lv_data.append(td.get_text(strip=True))
-        lv_table = {}
+        lv_result = {}
         for i, lvhi in enumerate(lv_headers):
             if isinstance(lvhi, list):
                 for j, lvhj in enumerate(lvhi):
-                    lv_table[lvhj] = lv_data[i][j]
+                    lv_result[lvhj] = lv_data[i][j]
             else:
-                lv_table[lvhi] = lv_data[i]
-        return lv_table
+                lv_result[lvhi] = lv_data[i]
+
+        # The html table is a mess, there might be another course parameters hidden inside the table.
+        # Let's go through the table again and pull out info from imbalanced structures
+        for i, lvdi in enumerate(lv_data):
+            if (isinstance(lvdi, list) and len(lvdi) > len(lv_headers[i])):
+                min_len = len(lv_headers[i])
+                del lvdi[:min_len]
+                t_odd = lvdi[0::2]
+                t_even = lvdi[1::2]
+                lv_result.update(dict(zip(t_odd, t_even)))
+
+        # Parse registration open and close time
+        registration_open, registration_close = lv_result['Anmeldefrist'].split(' - ')
+        lv_result.update({'registration_open': registration_open, 'registration_close': registration_close})
+
+        return lv_result
 
     def infos(self):
         print("getting data ...")
