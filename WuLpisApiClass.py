@@ -35,6 +35,7 @@ class WuLpisApi():
         self.data = {}
         self.number_reg = {}
         self.status = {}
+        self.course = {}
         self.browser = mechanize.Browser()
 
         if sessiondir:
@@ -96,11 +97,13 @@ class WuLpisApi():
         if "last_logged_in" in status:
             status["last_logged_in"] = self.status["last_logged_in"].strftime("%Y-%m-%d %H:%M:%S")
         return { "data": self.data,
+                 "course": self.course,
                  "status": self.status }
 
     def number_registration(self):
         print("Single registration using number in the electronic course catalog ...")
         nrURL = self.data + self.number_reg['slag']
+        print(nrURL)
 
         res = self.browser.open(nrURL)
 
@@ -116,12 +119,9 @@ class WuLpisApi():
         print("\nLogged as: {}".format(logged_as))
 
         lv_course_data = self.lv_data_table(course)
+        self.course = lv_course_data
         print("\n---------- Course information ------------")
         print(json.dumps(lv_course_data, sort_keys=False, indent=4, ensure_ascii=False).encode('utf8'))
-
-        reg_open_time = time.mktime(datetime.datetime.strptime(lv_course_data['registration_open'], "%d.%m.%Y %H:%M").timetuple())
-        reg_close_time = time.mktime(datetime.datetime.strptime(lv_course_data['registration_close'], "%d.%m.%Y %H:%M").timetuple())
-        current_time = time.time()
 
         msg_area = course.find(text=lambda s: isinstance(s, Comment) and "Message Area" in s)
         print("\n---------- {} ------------".format(msg_area.strip()))
@@ -148,20 +148,22 @@ class WuLpisApi():
                 print("Registration successful!")
                 alert_content = register.select_one('div.b3k_alert_content').get_text(strip=True)
                 print(alert_content)
-                exit(0)
+                self.status = 'success'
         elif (red_msg):
             already_registered = "Veranstaltung {}".format(self.args.course)
             if any(already_registered in str(msg) for msg in red_msg):
                 print("\n---------- S U C C E S S ------------")
                 print("The course '{}' is already registered!\n").format(self.args.course)
-                exit(0)
+                self.status = 'success'
             else:
                 print("\n---------- E R R O R ------------")
                 print("Registration is not possible at the moment ...\n")
-                exit(1)
+                # this type of error can by re-tried again
+                self.status = 'error'
         else:
             print("Can't retrieve info about registration ...\n")
-            exit(2)
+            self.status = 'error'
+        return self.status
 
     def lv_data_table(self, bs_page):
         lv_table = bs_page.select_one('table.b3k-data')
