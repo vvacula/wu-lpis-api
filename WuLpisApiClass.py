@@ -200,9 +200,16 @@ class WuLpisApi():
                 t_even = lvdi[1::2]
                 lv_result.update(dict(zip(t_odd, t_even)))
 
+        print(lv_result)
         # Parse registration open and close time
-        registration_open, registration_close = lv_result['Anmeldefrist'].split(' - ')
-        lv_result.update({'registration_open': registration_open, 'registration_close': registration_close})
+        registration = {}
+        if u'Anmeldefrist' in lv_result.keys():
+            registration['open'], registration['close'] = lv_result['Anmeldefrist'].split(' - ')
+        elif u'An- und Abmeldefrist' in lv_result.keys():
+            registration['open'], registration['close'] = lv_result['An- und Abmeldefrist'].split(' - ')
+        print(registration)
+
+        lv_result.update({'registration_open': registration['open'], 'registration_close': registration['close']})
 
         return lv_result
 
