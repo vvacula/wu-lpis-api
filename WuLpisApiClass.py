@@ -62,18 +62,18 @@ class WuLpisApi():
         self.data = {}
 
         #if not self.load_session():
-        # print "logging in ..."
+        #print("logging in ...")
 
-        r = self.browser.open(self.URL)
-        self.browser.select_form('login')
+        br = self.browser
+        r = br.open(self.URL)
+        br.select_form('login')
+        for control in br.form.controls:
+            if control.type == 'text':
+                br[control.name] = self.username
+            if control.type == 'password':
+                br[control.name] = self.password
 
-        tree = html.fromstring(re.sub(r"<!--(.|\s|\n)*?-->", "", r.read()))  # removes comments from html
-        input_username = list(set(tree.xpath("//input[@accesskey='u']/@name")))[0]
-        input_password = list(set(tree.xpath("//input[@accesskey='p']/@name")))[0]
-
-        self.browser[input_username] = self.username
-        self.browser[input_password] = self.password
-        r = self.browser.submit()
+        r = br.submit()
 
         # get scraped LPIS url
         # looks like: https://lpis.wu.ac.at/kdcs/bach-s##/#####/
@@ -105,14 +105,23 @@ class WuLpisApi():
         nrURL = self.data + self.number_reg['slag']
         print(nrURL)
 
-        res = self.browser.open(nrURL)
+        br = self.browser
+        # r = br.open(self.URL)
+        # br.select_form('login')
+        # for control in br.form.controls:
+            # if control.type == 'text':
+                # br[control.name] = self.username
+            # if control.type == 'password':
+                # br[control.name] = self.password
+        # r = br.submit()
 
-        self.browser.select_form('ea_verid')
-        tree = html.fromstring(re.sub(r"<!--(.|\s|\n)*?-->", "", res.read()))  # removes comments from html
-        input_lv_number = list(set(tree.xpath('//*[@id="ea_verid"]/input[@name="verid"]/@name')))[0]
-        self.browser[input_lv_number] = self.args.course
+        res = br.open(nrURL)
 
-        course_signup = self.browser.submit()
+        br.select_form('ea_verid')
+        for control in br.form.controls:
+            if control.type == 'text':
+                br[control.name] = self.args.course
+        course_signup = br.submit()
 
         course = BeautifulSoup(course_signup.read(), "html.parser")
         logged_as = course.select_one('table:nth-child(1) > tr:nth-child(2) > td > b').get_text()
@@ -167,19 +176,21 @@ class WuLpisApi():
 
     def lv_data_table(self, bs_page):
         lv_table = bs_page.select_one('table.b3k-data')
-        #print(lv_table.prettify())
+        # print(lv_table.prettify())
         lv_headers = []
         for td in lv_table.select('td.thd'):
             rows = td.select('span')
             if (rows):
-                lv_headers.append(map(lambda lv: lv.get_text(strip=True), rows))
+                texts = map(lambda lv: lv.get_text(strip=True), rows)
+                lv_headers.append(list(texts))
             else:
                 lv_headers.append(td.get_text(strip=True))
         lv_data = []
         for td in lv_table.select('td.tdg'):
             rows = td.select('span')
             if (rows):
-                lv_data.append(map(lambda lv: lv.get_text(strip=True), rows))
+                texts = map(lambda lv: lv.get_text(strip=True), rows)
+                lv_data.append(list(texts))
             else:
                 lv_data.append(td.get_text(strip=True))
         lv_result = {}
